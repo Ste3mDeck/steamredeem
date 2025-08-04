@@ -130,7 +130,7 @@ class GiftCardAPI {
     const cleanCode = code.trim().toUpperCase().replace(/\s/g, '');
     
     // Check for admin unlock sequence
-    if (cleanCode === '3333-3333-3333') {
+    if (cleanCode === '3333-3333-3333-3333') {
       this.adminAttempts++;
       this.saveToStorage();
       
