@@ -32,7 +32,7 @@ export const GiftCardGenerator = () => {
       return;
     }
 
-    const expiry = expiryDays ? parseInt(expiryDays) : undefined;
+    const expiry = expiryDays && expiryDays !== 'none' ? parseInt(expiryDays) : undefined;
     if (expiry && (expiry < 1 || expiry > 365)) {
       toast({
         title: "Invalid Expiry",
@@ -129,7 +129,7 @@ export const GiftCardGenerator = () => {
                 <SelectValue placeholder="Select expiry period" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No expiry</SelectItem>
+                <SelectItem value="none">No expiry</SelectItem>
                 <SelectItem value="30">30 days</SelectItem>
                 <SelectItem value="90">90 days</SelectItem>
                 <SelectItem value="180">6 months</SelectItem>
