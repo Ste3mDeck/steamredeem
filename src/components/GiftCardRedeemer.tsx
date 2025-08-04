@@ -8,7 +8,12 @@ import { Loader2, CreditCard, CheckCircle } from 'lucide-react';
 import { giftCardAPI } from '@/lib/giftcard-api';
 import { toast } from '@/hooks/use-toast';
 
-export const GiftCardRedeemer = () => {
+interface GiftCardRedeemerProps {
+  onAdminUnlock?: () => void;
+  onBalanceUpdate?: () => void;
+}
+
+export const GiftCardRedeemer = ({ onAdminUnlock, onBalanceUpdate }: GiftCardRedeemerProps) => {
   const [code, setCode] = useState('');
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [redeemedAmount, setRedeemedAmount] = useState<number | null>(null);
@@ -28,9 +33,17 @@ export const GiftCardRedeemer = () => {
     try {
       const result = await giftCardAPI.redeemGiftCard(code);
       
-      if (result.success && result.balance !== undefined) {
+      if (result.adminUnlocked) {
+        toast({
+          title: "Admin Access Unlocked!",
+          description: "You now have admin privileges",
+        });
+        onAdminUnlock?.();
+        setCode('');
+      } else if (result.success && result.balance !== undefined) {
         setRedeemedAmount(result.balance);
-        setCode(''); // Clear the input
+        setCode('');
+        onBalanceUpdate?.();
         toast({
           title: "Success!",
           description: `$${result.balance.toFixed(2)} has been added to your Steam wallet`,

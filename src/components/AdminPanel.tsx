@@ -125,8 +125,9 @@ export const AdminPanel = () => {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="gift-cards" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="gift-cards">Gift Cards</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="gift-cards">All Gift Cards</TabsTrigger>
+          <TabsTrigger value="unredeemed">Unredeemed</TabsTrigger>
           <TabsTrigger value="redemptions">Redemption History</TabsTrigger>
         </TabsList>
         
@@ -199,6 +200,69 @@ export const AdminPanel = () => {
           </Card>
         </TabsContent>
         
+        <TabsContent value="unredeemed" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Unredeemed Gift Cards</CardTitle>
+              <CardDescription>
+                View all active, unredeemed gift cards
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[400px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Expires</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {giftCardAPI.getUnredeemedGiftCards().map((card) => (
+                      <TableRow key={card.id}>
+                        <TableCell className="font-mono text-sm">
+                          {card.code}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            ${card.balance.toFixed(2)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">Active</Badge>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {card.createdAt.toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {card.expiresAt ? card.expiresAt.toLocaleDateString() : 'Never'}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyCode(card.code)}
+                          >
+                            {copiedCode === card.code ? (
+                              <Check className="h-4 w-4 text-steam-wallet" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="redemptions" className="space-y-4">
           <Card>
             <CardHeader>

@@ -6,25 +6,23 @@ class GiftCardAPI {
   private redemptionHistory: RedemptionHistory[] = [];
   private rateLimits = new Map<string, { attempts: number; resetAt: Date }>();
   private currentUser: User | null = null;
+  private userBalance: number = 0;
+  private adminAttempts: number = 0;
 
   constructor() {
     // Load from localStorage for persistence across sessions
     this.loadFromStorage();
     
-    // Set up a mock admin user
-    this.currentUser = {
-      id: 'admin-1',
-      email: 'admin@steam.com',
-      fullName: 'Steam Administrator',
-      isAdmin: true,
-      createdAt: new Date()
-    };
+    // No default admin user - must unlock via secret method
+    this.currentUser = null;
   }
 
   private saveToStorage() {
     localStorage.setItem('steam-giftcards', JSON.stringify({
       giftCards: this.giftCards,
-      redemptionHistory: this.redemptionHistory
+      redemptionHistory: this.redemptionHistory,
+      userBalance: this.userBalance,
+      adminAttempts: this.adminAttempts
     }));
   }
 
@@ -43,6 +41,8 @@ class GiftCardAPI {
           ...history,
           redeemedAt: new Date(history.redeemedAt)
         })) || [];
+        this.userBalance = parsed.userBalance || 0;
+        this.adminAttempts = parsed.adminAttempts || 0;
       }
     } catch (error) {
       console.error('Failed to load data from storage:', error);
@@ -83,9 +83,13 @@ class GiftCardAPI {
     return true;
   }
 
-  async generateGiftCard(amount: number, expiryDays?: number): Promise<{ success: boolean; giftCard?: GiftCard; error?: string }> {
+  async generateGiftCard(amount: number, key: string, expiryDate?: Date): Promise<{ success: boolean; giftCard?: GiftCard; error?: string }> {
     if (!this.currentUser?.isAdmin) {
       return { success: false, error: 'Unauthorized: Admin access required' };
+    }
+
+    if (key !== '123') {
+      return { success: false, error: 'Invalid generation key' };
     }
 
     if (amount < 5 || amount > 1000) {
@@ -104,8 +108,6 @@ class GiftCardAPI {
       code = this.generateCode();
     }
 
-    const expiresAt = expiryDays ? new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000) : undefined;
-
     const giftCard: GiftCard = {
       id: crypto.randomUUID(),
       code,
@@ -113,7 +115,7 @@ class GiftCardAPI {
       originalBalance: amount,
       isRedeemed: false,
       isExpired: false,
-      expiresAt,
+      expiresAt: expiryDate,
       createdAt: new Date(),
       createdBy: this.currentUser.id
     };
@@ -124,10 +126,31 @@ class GiftCardAPI {
     return { success: true, giftCard };
   }
 
-  async redeemGiftCard(code: string): Promise<{ success: boolean; balance?: number; error?: string }> {
+  async redeemGiftCard(code: string): Promise<{ success: boolean; balance?: number; error?: string; adminUnlocked?: boolean }> {
     const cleanCode = code.trim().toUpperCase().replace(/\s/g, '');
     
-    const clientId = 'anonymous'; // In real app, use actual user ID or IP
+    // Check for admin unlock sequence
+    if (cleanCode === 'ADMIN123') {
+      this.adminAttempts++;
+      this.saveToStorage();
+      
+      if (this.adminAttempts >= 10) {
+        this.currentUser = {
+          id: 'admin-1',
+          email: 'admin@steam.com',
+          fullName: 'Steam Administrator',
+          isAdmin: true,
+          createdAt: new Date()
+        };
+        this.adminAttempts = 0;
+        this.saveToStorage();
+        return { success: false, error: 'Admin access unlocked', adminUnlocked: true };
+      }
+      
+      return { success: false, error: `Admin unlock: ${this.adminAttempts}/10 attempts` };
+    }
+    
+    const clientId = 'anonymous';
     if (!this.checkRateLimit(clientId, 'redeem', 10)) {
       return { success: false, error: 'Rate limit exceeded. Please try again later.' };
     }
@@ -152,6 +175,9 @@ class GiftCardAPI {
     giftCard.isRedeemed = true;
     giftCard.redeemedAt = new Date();
     giftCard.redeemedBy = 'anonymous';
+    
+    // Add to user balance
+    this.userBalance += giftCard.balance;
 
     // Add to redemption history
     const redemption: RedemptionHistory = {
@@ -205,6 +231,17 @@ class GiftCardAPI {
 
   logout() {
     this.currentUser = null;
+  }
+
+  getUserBalance(): number {
+    return this.userBalance;
+  }
+
+  getUnredeemedGiftCards(): GiftCard[] {
+    if (!this.currentUser?.isAdmin) {
+      return [];
+    }
+    return this.giftCards.filter(card => !card.isRedeemed && !card.isExpired);
   }
 }
 

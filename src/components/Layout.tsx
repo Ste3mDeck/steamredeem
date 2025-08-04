@@ -7,32 +7,29 @@ import {
   Gift, 
   CreditCard, 
   Settings, 
-  LogIn, 
   LogOut, 
   Gamepad2,
-  Shield
+  Shield,
+  Wallet
 } from 'lucide-react';
 import { GiftCardGenerator } from '@/components/GiftCardGenerator';
 import { GiftCardRedeemer } from '@/components/GiftCardRedeemer';
 import { AdminPanel } from '@/components/AdminPanel';
-import { AuthModal } from '@/components/AuthModal';
 import { giftCardAPI } from '@/lib/giftcard-api';
 import { User } from '@/types/giftcard';
 
 export const Layout = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [activeTab, setActiveTab] = useState('redeem');
+  const [userBalance, setUserBalance] = useState(0);
 
   useEffect(() => {
     setCurrentUser(giftCardAPI.getCurrentUser());
+    setUserBalance(giftCardAPI.getUserBalance());
   }, []);
 
-  const handleLogin = () => {
+  const handleAdminUnlock = () => {
     setCurrentUser(giftCardAPI.getCurrentUser());
-    if (activeTab === 'admin' && !giftCardAPI.getCurrentUser()?.isAdmin) {
-      setActiveTab('redeem');
-    }
   };
 
   const handleLogout = () => {
@@ -43,14 +40,16 @@ export const Layout = () => {
 
   const handleTabChange = (value: string) => {
     if (value === 'admin' && !currentUser?.isAdmin) {
-      setShowAuthModal(true);
       return;
     }
     if (value === 'generate' && !currentUser?.isAdmin) {
-      setShowAuthModal(true);
       return;
     }
     setActiveTab(value);
+  };
+
+  const handleBalanceUpdate = () => {
+    setUserBalance(giftCardAPI.getUserBalance());
   };
 
   return (
@@ -95,13 +94,12 @@ export const Layout = () => {
                   </Button>
                 </div>
               ) : (
-                <Button 
-                  variant="outline"
-                  onClick={() => setShowAuthModal(true)}
-                >
-                  <LogIn className="h-4 w-4 mr-2" />
-                  Admin Login
-                </Button>
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" className="text-sm">
+                    <Wallet className="h-4 w-4 mr-2" />
+                    Balance: ${userBalance.toFixed(2)}
+                  </Badge>
+                </div>
               )}
             </div>
           </div>
@@ -136,7 +134,7 @@ export const Layout = () => {
 
           <div className="max-w-2xl mx-auto">
             <TabsContent value="redeem">
-              <GiftCardRedeemer />
+              <GiftCardRedeemer onAdminUnlock={handleAdminUnlock} onBalanceUpdate={handleBalanceUpdate} />
             </TabsContent>
 
             <TabsContent value="generate">
@@ -147,13 +145,9 @@ export const Layout = () => {
                   <CardContent className="pt-6 text-center">
                     <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-semibold mb-2">Admin Access Required</h3>
-                    <p className="text-muted-foreground mb-4">
+                    <p className="text-muted-foreground">
                       You need admin privileges to generate gift cards.
                     </p>
-                    <Button onClick={() => setShowAuthModal(true)}>
-                      <LogIn className="h-4 w-4 mr-2" />
-                      Login as Admin
-                    </Button>
                   </CardContent>
                 </Card>
               )}
@@ -167,13 +161,9 @@ export const Layout = () => {
                   <CardContent className="pt-6 text-center">
                     <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-semibold mb-2">Admin Access Required</h3>
-                    <p className="text-muted-foreground mb-4">
+                    <p className="text-muted-foreground">
                       You need admin privileges to access the admin panel.
                     </p>
-                    <Button onClick={() => setShowAuthModal(true)}>
-                      <LogIn className="h-4 w-4 mr-2" />
-                      Login as Admin
-                    </Button>
                   </CardContent>
                 </Card>
               )}
@@ -194,11 +184,6 @@ export const Layout = () => {
         </div>
       </footer>
 
-      <AuthModal 
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onSuccess={handleLogin}
-      />
     </div>
   );
 };

@@ -13,7 +13,8 @@ import { GiftCard } from '@/types/giftcard';
 export const GiftCardGenerator = () => {
   const [amount, setAmount] = useState<string>('');
   const [customAmount, setCustomAmount] = useState<string>('');
-  const [expiryDays, setExpiryDays] = useState<string>('');
+  const [key, setKey] = useState<string>('');
+  const [expiryDate, setExpiryDate] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedCard, setGeneratedCard] = useState<GiftCard | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
@@ -32,11 +33,20 @@ export const GiftCardGenerator = () => {
       return;
     }
 
-    const expiry = expiryDays && expiryDays !== 'none' ? parseInt(expiryDays) : undefined;
-    if (expiry && (expiry < 1 || expiry > 365)) {
+    if (!key) {
       toast({
-        title: "Invalid Expiry",
-        description: "Expiry must be between 1 and 365 days",
+        title: "Key Required",
+        description: "Please enter the generation key",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const expiry = expiryDate ? new Date(expiryDate) : undefined;
+    if (expiry && expiry <= new Date()) {
+      toast({
+        title: "Invalid Expiry Date",
+        description: "Expiry date must be in the future",
         variant: "destructive"
       });
       return;
@@ -45,10 +55,13 @@ export const GiftCardGenerator = () => {
     setIsGenerating(true);
     
     try {
-      const result = await giftCardAPI.generateGiftCard(finalAmount, expiry);
+      const result = await giftCardAPI.generateGiftCard(finalAmount, key, expiry);
       
       if (result.success && result.giftCard) {
         setGeneratedCard(result.giftCard);
+        setCustomAmount('');
+        setKey('');
+        setExpiryDate('');
         toast({
           title: "Gift Card Generated!",
           description: `Successfully created a $${finalAmount} gift card`,
@@ -123,19 +136,23 @@ export const GiftCardGenerator = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="expiry">Expiry (Optional)</Label>
-            <Select value={expiryDays} onValueChange={setExpiryDays}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select expiry period" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No expiry</SelectItem>
-                <SelectItem value="30">30 days</SelectItem>
-                <SelectItem value="90">90 days</SelectItem>
-                <SelectItem value="180">6 months</SelectItem>
-                <SelectItem value="365">1 year</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="key">Generation Key</Label>
+            <Input
+              placeholder="Enter generation key"
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              type="password"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="expiry">Expiry Date (Optional)</Label>
+            <Input
+              type="datetime-local"
+              value={expiryDate}
+              onChange={(e) => setExpiryDate(e.target.value)}
+              min={new Date().toISOString().slice(0, 16)}
+            />
           </div>
 
           <Button 
